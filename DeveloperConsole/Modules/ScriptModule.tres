@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="ScriptModule" load_steps=2 format=3 uid="uid://bw80ektx6tl0t"]
+
+[ext_resource type="Script" path="res://DeveloperConsole/Modules/Scripts/ScriptModule.cs" id="1_b508q"]
+
+[resource]
+script = ExtResource("1_b508q")
