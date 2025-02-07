@@ -1,5 +1,4 @@
 using Godot;
-using System;
 
 public partial class QuadTreeTab: ConsoleTab
 {
@@ -128,3 +127,4 @@ public partial class QuadTreeTab: ConsoleTab
         // This tab doesn't handle text output
     }
 }
+

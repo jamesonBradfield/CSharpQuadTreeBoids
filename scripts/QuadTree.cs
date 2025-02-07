@@ -35,6 +35,63 @@ public partial class QuadTree : RefCounted
         this.southeast = new QuadTree(se, capacity);
         divided = true;
     }
+	private bool QuadIntersectsCircle(Rectangle quad, Point center, int squaredRadius) {
+		// Find closest point on rectangle to circle center
+		int closestX = Mathf.Clamp(center.GetX(), quad.GetX() - quad.GetW(), quad.GetX() + quad.GetW());
+		int closestZ = Mathf.Clamp(center.GetY(), quad.GetY() - quad.GetH(), quad.GetY() + quad.GetH());
+		
+		// Calculate squared distance between closest point and circle center
+		int dx = center.GetX() - closestX;
+		int dy = center.GetY() - closestZ;
+		int squaredDistance = dx * dx + dy * dy;
+		
+		// If squared distance is less than squared radius, they intersect
+		return squaredDistance <= squaredRadius;
+	}
+	public void Clear() {
+		points.Clear();
+		if (divided) {
+			northwest = null;
+			northeast = null;
+			southwest = null;
+			southeast = null;
+			divided = false;
+		}
+	}
+	public List<Point> QueryRadius(Point center, int radius) {
+		// Convert radius to our integer space
+		int searchRadius = radius * 1000;
+		// Use squared distance to avoid sqrt
+		int squaredRadius = searchRadius * searchRadius;
+		
+		return QueryRadius(center, squaredRadius, new List<Point>());
+	}
+
+	private List<Point> QueryRadius(Point center, int squaredRadius, List<Point> found) {
+		// First check if this quad is too far from search circle
+		// We can still use rectangle for quick broad-phase rejection
+		if (!QuadIntersectsCircle(boundary, center, squaredRadius)) {
+			return found;
+		}
+
+		// Check points in this quad
+		foreach(var p in points) {
+			int dx = p.GetX() - center.GetX();
+			int dy = p.GetY() - center.GetY();
+			if (dx * dx + dy * dy <= squaredRadius) {
+				found.Add(p);
+			}
+		}
+
+		if (divided) {
+			northwest.QueryRadius(center, squaredRadius, found);
+			northeast.QueryRadius(center, squaredRadius, found);
+			southwest.QueryRadius(center, squaredRadius, found);
+			southeast.QueryRadius(center, squaredRadius, found);
+		}
+
+		return found;
+	}
 	public List<Point> Query(Rectangle range){
 		return Query(range, new List<Point>());
 	}

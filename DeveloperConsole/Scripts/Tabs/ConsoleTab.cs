@@ -19,3 +19,4 @@ public abstract partial class ConsoleTab : Control
         public abstract void WriteLine(string message, Color? color = null);
     }
 
+

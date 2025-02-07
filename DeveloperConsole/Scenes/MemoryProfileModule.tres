@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="MemoryProfileModule" load_steps=2 format=3 uid="uid://cqcsasfp0dykv"]
+
+[ext_resource type="Script" path="res://DeveloperConsole/Scripts/Modules/MemoryProfileModule.cs" id="1_gdio8"]
+
+[resource]
+script = ExtResource("1_gdio8")

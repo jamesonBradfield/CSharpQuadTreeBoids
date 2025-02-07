@@ -1,3 +1,25 @@
-[gd_scene format=3 uid="uid://rh5x3goqt4nn"]
+[gd_scene load_steps=5 format=3 uid="uid://rh5x3goqt4nn"]
+
+[ext_resource type="Script" path="res://scripts/Flock.cs" id="1_kwuxf"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_6h7ei"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_ais24"]
+sky_material = SubResource("ProceduralSkyMaterial_6h7ei")
+
+[sub_resource type="Environment" id="Environment_tl2jn"]
+background_mode = 1
+background_color = Color(1, 1, 1, 1)
+sky = SubResource("Sky_ais24")
+tonemap_mode = 2
+glow_enabled = true
 
 [node name="Node3D" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_tl2jn")
+
+[node name="Node3D" type="Node3D" parent="."]
+script = ExtResource("1_kwuxf")

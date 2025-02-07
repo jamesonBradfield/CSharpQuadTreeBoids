@@ -1,9 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://j3tesjr0wv5o"]
+[gd_scene load_steps=4 format=3 uid="uid://j3tesjr0wv5o"]
 
-[ext_resource type="Script" path="res://DeveloperConsole/DeveloperConsole.cs" id="1_7s2kw"]
-[ext_resource type="Resource" uid="uid://cypcte64hhbp4" path="res://DeveloperConsole/Modules/QuadTreeModule.tres" id="2_7vspe"]
-[ext_resource type="Resource" uid="uid://b5rh1bvy6ioib" path="res://DeveloperConsole/Modules/MemoryProfileModule.tres" id="4_wvkeh"]
-[ext_resource type="Resource" uid="uid://bw80ektx6tl0t" path="res://DeveloperConsole/Modules/ScriptModule.tres" id="5_2uiv4"]
+[ext_resource type="Script" path="res://DeveloperConsole/Scripts/DeveloperConsole.cs" id="1_7s2kw"]
+[ext_resource type="Resource" uid="uid://cqcsasfp0dykv" path="res://DeveloperConsole/Scenes/MemoryProfileModule.tres" id="2_v23yy"]
 [ext_resource type="Theme" uid="uid://643t236tkt5t" path="res://DeveloperConsole/ConsoleTheme.tres" id="5_q4g7q"]
 
 [node name="DeveloperConsole" type="Control"]
@@ -15,7 +13,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_7s2kw")
-Modules = [ExtResource("5_2uiv4"), ExtResource("4_wvkeh"), ExtResource("2_7vspe")]
+Modules = [ExtResource("2_v23yy")]
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1

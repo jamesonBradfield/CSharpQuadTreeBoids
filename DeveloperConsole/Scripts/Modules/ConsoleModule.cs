@@ -4,7 +4,7 @@ using Godot;
 public abstract partial class ConsoleModule : Resource
 {
     protected DeveloperConsole Console { get; private set; }
-    public ConsoleTab ModuleTab { get; protected set; }
+    protected ConsoleTab ModuleTab { get; set; }
     
     // Use TabId for command prefixes
     protected virtual string TabId => GetType().Name.Replace("Module", "").ToLower();
