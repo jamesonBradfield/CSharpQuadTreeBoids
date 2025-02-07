@@ -23,7 +23,7 @@ public static class Helpers{
         int halfSize = (int)(size * 1000);
 
         // Create boundary centered at 0,0 that encompasses our world
-        Rectangle boundary = new Rectangle(0, 0, halfSize);
+        Square boundary = new Square(0, 0, halfSize);
         return new QuadTree(boundary, 4);
     }
 	///<Summary>

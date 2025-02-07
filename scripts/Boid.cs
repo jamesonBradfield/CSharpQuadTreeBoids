@@ -20,15 +20,15 @@ public partial class Boid : Node3D
     public Vector3 velocity;
     public Vector3 acceleration;
 
-    public void Initialize(int ID, float world_size, Flock parentFlock, Material coneMat)
+    public void Initialize(int ID, float world_size, Flock parentFlock)
     {
         this.parentFlock = parentFlock;
         this.ID = ID;
         this.world_size = world_size;
         point = new Point(ID,
-            (int)GD.RandRange(-world_size, world_size) * 1000,
-            (int)GD.RandRange(-world_size, world_size)
-                );
+            (int)(GD.RandRange(-world_size, world_size) * 1000),
+            (int)(GD.RandRange(-world_size, world_size) * 1000)
+        );
         velocity = new Vector3(GD.Randf() * 2 - 1, 0, GD.Randf() * 2 - 1).Normalized() * max_speed;
     }
     private bool IsInFieldOfView(Vector3 otherPos)
@@ -40,18 +40,30 @@ public partial class Boid : Node3D
     }
     public override void _Ready()
     {
-		float topRadius =  Mathf.DegToRad(Mathf.Tan(fieldOfView * 0.5f)) * search_radius;
+        // Create boid mesh
         meshInstance = Helpers.CreatePrismMeshAsChild(this, new Vector3(2.0f, 4.0f, 2.0f));
-        visionConeMeshInstance = Helpers.CreateConeMeshAsChild(this, topRadius, 0.0f, search_radius);
-        visionConeMeshInstance.MaterialOverride = coneMat;
-        // Point mesh in direction of movement
-        meshInstance.RotationDegrees = new Vector3(0, 0, -180); // Rotate to point forward
-        visionConeMeshInstance.RotationDegrees = new Vector3(0, 0, -180); // Rotate to point forward
+        meshInstance.RotationDegrees = new Vector3(0, 0, -180);
+
+        // Create vision cone
+        float coneRadius = Mathf.Tan(Mathf.DegToRad(fieldOfView * 0.5f)) * search_radius;
+        visionConeMeshInstance = Helpers.CreateConeMeshAsChild(this, 0.0f, coneRadius, search_radius);
+
+        // Add transparency to cone
+        StandardMaterial3D material = new StandardMaterial3D();
+        material.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
+        material.AlbedoColor = new Color(1, 1, 1, 0.2f);
+
+        if (visionConeMeshInstance.Mesh is CylinderMesh coneMesh)
+        {
+            coneMesh.Material = material;
+        }
+
         Position = new Vector3(
             (float)GD.RandRange(-world_size, world_size),
             0,
             (float)GD.RandRange(-world_size, world_size)
         );
+
         parentFlock.AddToBoidID(this);
         parentFlock.AddToPointID(point);
     }
@@ -202,7 +214,6 @@ public partial class Boid : Node3D
                     Vector3 diff = Position - other.Position;
                     float d = diff.Length();
 
-                    // Use unscaled search radius for world-space comparison
                     if (d < search_radius && d > 0)
                     {
                         float epsilon = 0.0001f;

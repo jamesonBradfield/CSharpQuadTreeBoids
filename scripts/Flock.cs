@@ -9,7 +9,6 @@ public partial class Flock : Node3D
     int processingFrames = 0;
     #endregion
     #region flock_data
-    [Export] Material coneMat;
     float world_size = 500.0f;
     int num_boids = 200;
     QuadTree quad_tree;
@@ -30,7 +29,7 @@ public partial class Flock : Node3D
         for (int i = 0; i < num_boids; i++)
         {
             Boid boid = new Boid();
-            boid.Initialize(i, world_size, this, coneMat);
+            boid.Initialize(i, world_size, this);
             AddChild(boid);
             flock.Add(boid);
         }

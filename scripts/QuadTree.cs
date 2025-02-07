@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using Godot;
+// NOTE: I can't help but think storing the x,y of our root node and calculating every other node on the fly might be more performant, IE doing away with all data structures and storing one x and y and maybe a isRoot bool and a depth int with maybe an int for which quadrant of its parents a node is in.
 [GlobalClass]
 public partial class QuadTree : RefCounted
 {
-    public Rectangle boundary;
+    public Square boundary;
     public int capacity;
     private List<Point> points = new List<Point>();
     public QuadTree northwest;
@@ -12,7 +13,7 @@ public partial class QuadTree : RefCounted
     public QuadTree southeast;
     public bool divided = false;
 
-    public QuadTree(Rectangle boundary, int n)
+    public QuadTree(Square boundary, int n)
     {
         this.boundary = boundary;
         this.capacity = n;
@@ -22,135 +23,96 @@ public partial class QuadTree : RefCounted
     {
         int x = boundary.GetX();
         int y = boundary.GetY();
-        int s = boundary.GetS();
-		Rectangle nw = new Rectangle(x-(s>>1),y+(s>>1),s>>1);
-		Rectangle ne = new Rectangle(x+ (s>>1),y+(s>>1),s>>1);
-		Rectangle sw = new Rectangle(x-(s>>1),y-(s>>1),s>>1);
-		Rectangle se = new Rectangle(x+(s>>1),y-(s>>1),s>>1);
+        int halfSize = boundary.GetS() >> 1;
 
-        this.northwest = new QuadTree(nw, capacity);
-        this.northeast = new QuadTree(ne, capacity);
-        this.southwest = new QuadTree(sw, capacity);
-        this.southeast = new QuadTree(se, capacity);
+        // Since we're working with squares, we can simplify these calculations
+        northwest = new QuadTree(new Square(x - halfSize, y + halfSize, halfSize), capacity);
+        northeast = new QuadTree(new Square(x + halfSize, y + halfSize, halfSize), capacity);
+        southwest = new QuadTree(new Square(x - halfSize, y - halfSize, halfSize), capacity);
+        southeast = new QuadTree(new Square(x + halfSize, y - halfSize, halfSize), capacity);
+
         divided = true;
     }
-	private bool QuadIntersectsCircle(Rectangle quad, Point center, int squaredRadius) {
-		// Find closest point on rectangle to circle center
-		int closestX = Mathf.Clamp(center.GetX(), quad.GetX() - quad.GetS(), quad.GetX() + quad.GetS());
-		int closestZ = Mathf.Clamp(center.GetY(), quad.GetY() - quad.GetS(), quad.GetY() + quad.GetS());
-		
-		// Calculate squared distance between closest point and circle center
-		int dx = center.GetX() - closestX;
-		int dy = center.GetY() - closestZ;
-		int squaredDistance = dx * dx + dy * dy;
-		
-		// If squared distance is less than squared radius, they intersect
-		return squaredDistance <= squaredRadius;
-	}
-	public void Clear() {
-		points.Clear();
-		if (divided) {
-			northwest = null;
-			northeast = null;
-			southwest = null;
-			southeast = null;
-			divided = false;
-		}
-	}
-	public List<Point> QueryRadius(Point center, int radius) {
-		// Convert radius to our integer space
-		int searchRadius = radius * 1000;
-		// Use squared distance to avoid sqrt
-		int squaredRadius = searchRadius * searchRadius;
-		
-		return QueryRadius(center, squaredRadius, new List<Point>());
-	}
 
-	private List<Point> QueryRadius(Point center, int squaredRadius, List<Point> found) {
-		// First check if this quad is too far from search circle
-		// We can still use rectangle for quick broad-phase rejection
-		if (!QuadIntersectsCircle(boundary, center, squaredRadius)) {
-			return found;
-		}
+    private bool QuadIntersectsCircle(Square quad, Point center, int squaredRadius)
+    {
+        int s = quad.GetS();
+        int qx = quad.GetX();
+        int qy = quad.GetY();
 
-		// Check points in this quad
-		foreach(var p in points) {
-			int dx = p.GetX() - center.GetX();
-			int dy = p.GetY() - center.GetY();
-			if (dx * dx + dy * dy <= squaredRadius) {
-				found.Add(p);
-			}
-		}
+        // For squares, we can optimize the clamping
+        int closestX = Mathf.Clamp(center.GetX(), qx - s, qx + s);
+        int closestZ = Mathf.Clamp(center.GetY(), qy - s, qy + s);
 
-		if (divided) {
-			northwest.QueryRadius(center, squaredRadius, found);
-			northeast.QueryRadius(center, squaredRadius, found);
-			southwest.QueryRadius(center, squaredRadius, found);
-			southeast.QueryRadius(center, squaredRadius, found);
-		}
+        // Use squared distance comparison
+        int dx = center.GetX() - closestX;
+        int dy = center.GetY() - closestZ;
+        return (dx * dx + dy * dy) <= squaredRadius;
+    }
 
-		return found;
-	}
-	public List<Point> Query(Rectangle range){
-		return Query(range, new List<Point>());
-	}
+    public List<Point> QueryRadius(Point center, int radius)
+    {
+        int searchRadius = radius * 1000;
+        return QueryRadius(center, searchRadius * searchRadius, new List<Point>());
+    }
 
-	private List<Point> Query(Rectangle range, List<Point> found){
-		if (!this.boundary.intersects(range)){
-			return found;
-		}else{
-			foreach( var p in this.points){
-				if (range.contains(p)){
-					found.Add(p);
-				}
-			}
-			if (divided){
-				northwest.Query(range,found);
-				northeast.Query(range,found);
-				southwest.Query(range,found);
-				southeast.Query(range,found);
-			}
-			return found;
-		}
+    private List<Point> QueryRadius(Point center, int squaredRadius, List<Point> found)
+    {
+        if (!QuadIntersectsCircle(boundary, center, squaredRadius))
+        {
+            return found;
+        }
 
-	}
+        foreach (var p in points)
+        {
+            int dx = p.GetX() - center.GetX();
+            int dy = p.GetY() - center.GetY();
+            if ((dx * dx + dy * dy) <= squaredRadius)
+            {
+                found.Add(p);
+            }
+        }
+
+        if (divided)
+        {
+            northwest.QueryRadius(center, squaredRadius, found);
+            northeast.QueryRadius(center, squaredRadius, found);
+            southwest.QueryRadius(center, squaredRadius, found);
+            southeast.QueryRadius(center, squaredRadius, found);
+        }
+
+        return found;
+    }
 
     public bool Insert(Point point)
     {
+        // Check if point is within boundary
         if (!boundary.contains(point))
         {
             return false;
         }
+
+        // If there's room here and we haven't subdivided, add the point
         if (points.Count < capacity)
         {
             points.Add(point);
             return true;
         }
+
+        // Subdivide if we haven't yet
         if (!divided)
         {
             Subdivide();
         }
-        if (northeast.Insert(point)) 
-        {
-            return true;
-        }
-        if (northwest.Insert(point)) 
-        {
-            return true;
-        }
-        if (southeast.Insert(point)) 
-        {
-            return true;
-        }
-        if (southwest.Insert(point)) 
-        {
-            return true;
-        }
 
-        return false;
+        // Try to insert into appropriate quadrant
+        return northeast.Insert(point) ||
+               northwest.Insert(point) ||
+               southeast.Insert(point) ||
+               southwest.Insert(point);
     }
 
-    public Rectangle GetBoundary() => boundary;
+    public Square GetBoundary() => boundary;
     public List<Point> GetPoints() => points;
     public bool IsDivided() => divided;
     public QuadTree GetNorthwest() => northwest;

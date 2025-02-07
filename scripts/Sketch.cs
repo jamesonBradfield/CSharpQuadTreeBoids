@@ -3,7 +3,7 @@ using System;
 
 public partial class Sketch: Node3D
 {
-	// static Rectangle boundary = new Rectangle(0,0,5,5);
+	// static Square boundary = new Square(0,0,5,5);
 	// [Export] public QuadTree qt = new QuadTree(boundary,4);
 	//
 	// public override void _Ready(){
