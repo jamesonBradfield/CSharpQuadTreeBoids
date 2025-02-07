@@ -28,7 +28,7 @@
 			<key>optional</key>
 			<true/>
 			<key>weight</key>
-			<real>1000</real>
+			<real>QuadTreeConstants.WORLD_TO_QUAD_SCALE</real>
 		</dict>
 		<key>^Resources/.*\.lproj/locversion.plist$</key>
 		<dict>
@@ -92,7 +92,7 @@
 			<key>optional</key>
 			<true/>
 			<key>weight</key>
-			<real>1000</real>
+			<real>QuadTreeConstants.WORLD_TO_QUAD_SCALE</real>
 		</dict>
 		<key>^Resources/.*\.lproj/locversion.plist$</key>
 		<dict>

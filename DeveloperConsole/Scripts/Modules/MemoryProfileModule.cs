@@ -10,7 +10,7 @@ public partial class MemoryProfileModule : ConsoleModule
     private double _recordInterval = 1.0;
     private double _elapsedTime = 0.0;
     private Dictionary<string, List<MemorySnapshot>> _profileSnapshots = new();
-    private int _maxSnapshots = 1000;
+    private int _maxSnapshots = QuadTreeConstants.WORLD_TO_QUAD_SCALE;
     public string _currentProfile = "default";
     private Dictionary<string, double> startTimes = new Dictionary<string, double>();
     private Dictionary<string, double> memoryUsages = new Dictionary<string, double>();

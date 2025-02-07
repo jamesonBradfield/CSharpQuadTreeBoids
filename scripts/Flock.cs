@@ -10,7 +10,7 @@ public partial class Flock : Node3D
     #endregion
     #region flock_data
     float world_size = 500.0f;
-    int num_boids = 200;
+    int num_boids = 500;
     QuadTree quad_tree;
     public List<Boid> flock = new List<Boid>();
     Dictionary<int, Point> idToPoint = new Dictionary<int, Point>();
@@ -44,7 +44,7 @@ public partial class Flock : Node3D
             quad_tree.Clear();
             ProcessBoids(delta);
             var endTime = Time.GetTicksUsec();
-            double frameProcessingTime = (endTime - startTime) / 1000.0;
+            double frameProcessingTime = (endTime - startTime) / QuadTreeConstants.WORLD_TO_QUAD_SCALE;
             totalProcessingTime += frameProcessingTime;
             processingFrames++;
             MemoryProfiler.AddMetric(BOID_PROFILE_NAME, "avg_frame_time", totalProcessingTime / processingFrames);
@@ -62,14 +62,11 @@ public partial class Flock : Node3D
     {
         for (int i = 0; i < flock.Count; i++)
         {
-            Boid boid = flock[i];
-            Point point = idToPoint[boid.ID];
-            var pos = boid.Position;
-            point.UpdatePosition(
-                (int)(pos.X * 1000),
-                (int)(pos.Z * 1000)
+            idToPoint[flock[i].ID].UpdatePosition(
+                flock[i].Position.X,
+                flock[i].Position.Z
             );
-            quad_tree.Insert(point);
+            quad_tree.Insert(idToPoint[flock[i].ID]);
         }
 
         foreach (Boid boid in flock)

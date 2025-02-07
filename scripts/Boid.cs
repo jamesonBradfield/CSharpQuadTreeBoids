@@ -2,12 +2,13 @@ using Godot;
 using System.Collections.Generic;
 public partial class Boid : Node3D
 {
-    float alignmentWeight = 0.75f;
-    float cohesionWeight = 0.4f;
-    float separationWeight = 1.4f;
-    public float search_radius = 25.0f;
-    public float max_speed = 20.0f;
-    public float max_force = .5f;
+    float alignmentWeight = 0.3f;
+    float cohesionWeight = 0.3f;
+    float separationWeight = 1.3f;
+	float separation_radius = 5.0f;
+    public float search_radius = 10.0f;
+    public float max_speed = 50.0f;
+    public float max_force = 1.0f;
     public int ID;
     float fieldOfView = 120.0f;
     QuadTree quadTree;
@@ -26,15 +27,22 @@ public partial class Boid : Node3D
         this.ID = ID;
         this.world_size = world_size;
         point = new Point(ID,
-            (int)(GD.RandRange(-world_size, world_size) * 1000),
-            (int)(GD.RandRange(-world_size, world_size) * 1000)
+            (float)GD.RandRange(-world_size, world_size),
+            (float)GD.RandRange(-world_size, world_size)
         );
-        velocity = new Vector3(GD.Randf() * 2 - 1, 0, GD.Randf() * 2 - 1).Normalized() * max_speed;
+
+        // Initialize with a more similar direction
+        float angle = (float)GD.RandRange(0, Mathf.Pi * 2);
+        velocity = new Vector3(
+            Mathf.Cos(angle),
+            0,
+            Mathf.Sin(angle)
+        ).Normalized() * max_speed;
     }
     private bool IsInFieldOfView(Vector3 otherPos)
     {
         Vector3 directionToOther = (otherPos - Position).Normalized();
-        Vector3 forward = -Transform.Basis.Z; // Assuming forward is -Z in Godot
+        Vector3 forward = velocity.Normalized(); // Use velocity direction instead of transform
         float angle = Mathf.RadToDeg(Mathf.Acos(forward.Dot(directionToOther)));
         return angle <= fieldOfView * 0.5f; // Half angle on each side
     }
@@ -42,22 +50,7 @@ public partial class Boid : Node3D
     {
         // Create boid mesh
         meshInstance = Helpers.CreatePrismMeshAsChild(this, new Vector3(2.0f, 4.0f, 2.0f));
-        meshInstance.RotationDegrees = new Vector3(0, 0, -180);
-
-        // Create vision cone
-        float coneRadius = Mathf.Tan(Mathf.DegToRad(fieldOfView * 0.5f)) * search_radius;
-        visionConeMeshInstance = Helpers.CreateConeMeshAsChild(this, 0.0f, coneRadius, search_radius);
-
-        // Add transparency to cone
-        StandardMaterial3D material = new StandardMaterial3D();
-        material.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
-        material.AlbedoColor = new Color(1, 1, 1, 0.2f);
-
-        if (visionConeMeshInstance.Mesh is CylinderMesh coneMesh)
-        {
-            coneMesh.Material = material;
-        }
-
+        meshInstance.Rotation = new Vector3(-90, 0, 0);
         Position = new Vector3(
             (float)GD.RandRange(-world_size, world_size),
             0,
@@ -80,11 +73,6 @@ public partial class Boid : Node3D
                 Position.Y,
                 Wrap(Position.Z, -half_size, half_size)
             );
-
-            if (oldPos != Position)
-            {
-                Log($"Wrapped position from ({oldPos.X:F1}, {oldPos.Z:F1}) to ({Position.X:F1}, {Position.Z:F1})");
-            }
         }
         else
         {
@@ -114,13 +102,13 @@ public partial class Boid : Node3D
     {
         if (velocity != Vector3.Zero)
         {
-            var lookAt = GlobalPosition + velocity.Normalized();
+            var lookAt = GlobalPosition + velocity.Normalized() * 10;
             LookAt(lookAt);
-            RotateObjectLocal(Vector3.Right, Mathf.Pi / 2); // Adjust to point forward
         }
         velocity += acceleration;
         velocity = velocity.Normalized() * Mathf.Min(velocity.Length(), max_speed);
         Position += velocity * (float)delta;
+        point.UpdatePosition(Position.X, Position.Z);
         WrapPosition();  // Add wrapping
         acceleration = Vector3.Zero; // Reset acceleration
     }
@@ -132,15 +120,9 @@ public partial class Boid : Node3D
         Vector3 alignment = Alignment(nearbyPoints) * alignmentWeight;
         Vector3 cohesion = Cohesion(nearbyPoints) * cohesionWeight;
         Vector3 separation = Separation(nearbyPoints) * separationWeight;
-
-        if (ID == 0)
-        {
-            Log($"Raw forces:");
-            Log($"  Alignment ({alignmentWeight:F1}): {alignment.Length():F2}");
-            Log($"  Cohesion ({cohesionWeight:F1}): {cohesion.Length():F2}");
-            Log($"  Separation ({separationWeight:F1}): {separation.Length():F2}");
-        }
-        acceleration += alignment + cohesion + separation;
+        acceleration += alignment;
+		acceleration += cohesion;
+		acceleration += separation;
     }
 
     public Vector3 Alignment(List<Point> nearby)
@@ -214,27 +196,19 @@ public partial class Boid : Node3D
                     Vector3 diff = Position - other.Position;
                     float d = diff.Length();
 
-                    if (d < search_radius && d > 0)
+                    if (d < search_radius && d > 0 && d > separation_radius)
                     {
                         float epsilon = 0.0001f;
-                        // Stronger inverse square falloff
-                        steering += diff.Normalized() * (search_radius / (d * d + epsilon));
+                        steering += diff.Normalized() * (1.0f / (d + epsilon));
                         total++;
                     }
                 }
             }
         }
 
-        if (total > 0 && ID == 0)
-        {
-            Log($"Separation found {total} neighbors within range");
-        }
-
         if (total > 0)
         {
             steering /= total;
-            steering = steering.Normalized() * max_speed;
-            steering -= velocity;
             steering = steering.LimitLength(max_force);
         }
         return steering;

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Godot;
-// NOTE: I can't help but think storing the x,y of our root node and calculating every other node on the fly might be more performant, IE doing away with all data structures and storing one x and y and maybe a isRoot bool and a depth int with maybe an int for which quadrant of its parents a node is in.
+using System;
+// BUG: we wrote this quadtree to convert boid positions to an int grid scaled by QuadTreeConstants.WORLD_TO_QUAD_SCALE, but, we have rewritten it and said scaling is lost.
 [GlobalClass]
 public partial class QuadTree : RefCounted
 {
@@ -44,15 +45,20 @@ public partial class QuadTree : RefCounted
         int closestX = Mathf.Clamp(center.GetX(), qx - s, qx + s);
         int closestZ = Mathf.Clamp(center.GetY(), qy - s, qy + s);
 
-        // Use squared distance comparison
+        // Check for potential overflow before squaring
         int dx = center.GetX() - closestX;
         int dy = center.GetY() - closestZ;
-        return (dx * dx + dy * dy) <= squaredRadius;
+
+        if (Math.Abs(dx) > 46340 || Math.Abs(dy) > 46340) // sqrt(Int32.MaxValue)
+            return false;
+
+        long squaredDist = (long)dx * dx + (long)dy * dy;
+        return squaredDist <= squaredRadius;
     }
 
     public List<Point> QueryRadius(Point center, int radius)
     {
-        int searchRadius = radius * 1000;
+        int searchRadius = radius * QuadTreeConstants.WORLD_TO_QUAD_SCALE;
         return QueryRadius(center, searchRadius * searchRadius, new List<Point>());
     }
 
@@ -110,6 +116,19 @@ public partial class QuadTree : RefCounted
                northwest.Insert(point) ||
                southeast.Insert(point) ||
                southwest.Insert(point);
+    }
+
+    public void Clear()
+    {
+        points.Clear();
+        if (divided)
+        {
+            northwest = null;
+            northeast = null;
+            southwest = null;
+            southeast = null;
+            divided = false;
+        }
     }
 
     public Square GetBoundary() => boundary;

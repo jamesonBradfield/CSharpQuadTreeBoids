@@ -10,7 +10,7 @@ public static class Helpers{
         // Height based on FOV and world size to ensure full visibility
         float fov = 75.0f; // Camera's field of view in degrees
 		camera.Fov = fov;
-        camera.Position = new Vector3(0, bounds, 0) * fov * 0.01f;
+        camera.Position = new Vector3(0,bounds, 0) * fov * 0.01f;
         camera.RotationDegrees = new Vector3(-90, 0, 0); // Look straight down
     }
 	///<Summary>
@@ -19,8 +19,8 @@ public static class Helpers{
     public static QuadTree CreateQuadTree(float size)
     {
         // Calculate bounds based on current world size
-        // We multiply by 1000 since we're using integer space for the quadtree
-        int halfSize = (int)(size * 1000);
+        // We multiply by QuadTreeConstants.WORLD_TO_QUAD_SCALE since we're using integer space for the quadtree
+        int halfSize = (int)(size * QuadTreeConstants.WORLD_TO_QUAD_SCALE);
 
         // Create boundary centered at 0,0 that encompasses our world
         Square boundary = new Square(0, 0, halfSize);
