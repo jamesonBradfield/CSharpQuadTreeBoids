@@ -1,6 +1,6 @@
 using Godot;
 
-public partial class QuadTreeTab: ConsoleTab
+public partial class QuadTreeTab : ConsoleTab
 {
     private Control canvas;
     private QuadTree currentTree;
@@ -33,11 +33,11 @@ public partial class QuadTreeTab: ConsoleTab
 
         // Calculate bounds of the entire quadtree
         (Vector2 min, Vector2 max) = CalculateTreeBounds(currentTree);
-        
+
         // Calculate scale and offset to fit and center the tree
         var bounds = new Vector2(max.X - min.X, max.Y - min.Y);
         var canvasSize = canvas.Size;
-        
+
         // Calculate scale to fit the tree with padding
         float scaleX = (canvasSize.X - 2 * PADDING) / bounds.X;
         float scaleY = (canvasSize.Y - 2 * PADDING) / bounds.Y;
@@ -57,11 +57,10 @@ public partial class QuadTreeTab: ConsoleTab
         var boundary = tree.GetBoundary();
         float x = (float)boundary.GetX();
         float y = (float)boundary.GetY();
-        float w = (float)boundary.GetW();
-        float h = (float)boundary.GetH();
+        float s = (float)boundary.GetS();
 
-        Vector2 min = new Vector2(x - w, y - h);
-        Vector2 max = new Vector2(x + w, y + h);
+        Vector2 min = new Vector2(x - s, y - s);
+        Vector2 max = new Vector2(x + s, y + s);
 
         if (tree.IsDivided())
         {
@@ -89,12 +88,11 @@ public partial class QuadTreeTab: ConsoleTab
         // Transform boundary coordinates
         float x = (float)boundary.GetX() * scale + offset.X;
         float y = (float)boundary.GetY() * scale + offset.Y;
-        float w = (float)boundary.GetW() * scale;
-        float h = (float)boundary.GetH() * scale;
+        float s = (float)boundary.GetS() * scale;
 
         // Draw boundary
-        var rect = new Rect2(x - w, y - h, w * 2, h * 2);
-        canvas.DrawRect(rect, Colors.White, false, 1.0f);
+        // var rect = new Rect2(x - s, y - s, s * 2);
+        // canvas.DrawRect(rect, Colors.White, false, 1.0f);
 
         // Draw points
         foreach (var point in points)

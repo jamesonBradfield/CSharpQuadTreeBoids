@@ -9,13 +9,15 @@ public partial class Flock : Node3D
     int processingFrames = 0;
     #endregion
     #region flock_data
-    Vector2 world_size = new Vector2(500, 500);
-    int num_boids = 100;
+    [Export] Material coneMat;
+    float world_size = 500.0f;
+    int num_boids = 200;
     QuadTree quad_tree;
     public List<Boid> flock = new List<Boid>();
     Dictionary<int, Point> idToPoint = new Dictionary<int, Point>();
     Dictionary<int, Boid> idToBoid = new Dictionary<int, Boid>();
-	#endregion
+    #endregion
+
     public override void _Ready()
     {
         Helpers.CreateCameraToViewBounds(world_size, this);
@@ -28,18 +30,19 @@ public partial class Flock : Node3D
         for (int i = 0; i < num_boids; i++)
         {
             Boid boid = new Boid();
-            boid.Initialize(i, world_size, this);
+            boid.Initialize(i, world_size, this, coneMat);
             AddChild(boid);
             flock.Add(boid);
         }
         StartProfiling();
     }
+
     public override void _Process(double delta)
     {
         if (isProfilingEnabled)
         {
             var startTime = Time.GetTicksUsec();
-			quad_tree.Clear();
+            quad_tree.Clear();
             ProcessBoids(delta);
             var endTime = Time.GetTicksUsec();
             double frameProcessingTime = (endTime - startTime) / 1000.0;
@@ -58,9 +61,9 @@ public partial class Flock : Node3D
 
     private void ProcessBoids(double delta)
     {
-        for(int i = 0;i < flock.Count; i++)
+        for (int i = 0; i < flock.Count; i++)
         {
-			Boid boid = flock[i];
+            Boid boid = flock[i];
             Point point = idToPoint[boid.ID];
             var pos = boid.Position;
             point.UpdatePosition(

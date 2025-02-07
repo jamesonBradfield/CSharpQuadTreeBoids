@@ -1,28 +1,27 @@
 public struct Rectangle {
 	private int x;
 	private int y;
-	private int w;
-	private int h;
+	private int s;
 
-	public Rectangle(int x, int y, int w, int h){
+	public Rectangle(int x, int y, int s){
 		this.x = x;
 		this.y = y;
-		this.w = w;
-		this.h = h;
+		// we are going to only use one int for side-length
+		this.s = s;
 	}
 
 	public bool contains(Point point){
-		return(point.GetX() >= x - w &&
-				point.GetX() <= x + w &&
-				point.GetY() >= y - h &&
-				point.GetY() <= y + h);
+		return(point.GetX() >= x - s &&
+				point.GetX() <= x + s &&
+				point.GetY() >= y - s &&
+				point.GetY() <= y + s);
 	}
 
 	public bool intersects(Rectangle range){
-		return !(range.x - range.w > this.x + this.w ||
-		   		 range.x + this.w < this.x - this.w ||
-				 range.y - range.h > this.y + this.h ||
-				 range.y + this.h < this.y - this.h);
+		return !(range.x - range.s > this.x + this.s ||
+		   		 range.x + this.s < this.x - this.s ||
+				 range.y - range.s > this.y + this.s ||
+				 range.y + this.s < this.y - this.s);
 	}
 
 	public int GetX(){
@@ -31,10 +30,7 @@ public struct Rectangle {
 	public int GetY(){
 		return this.y;
 	}
-	public int GetW(){
-		return this.w;
-	}
-	public int GetH(){
-		return this.h;
+	public int GetS(){
+		return this.s;
 	}
 }

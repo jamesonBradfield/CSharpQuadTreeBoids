@@ -22,12 +22,11 @@ public partial class QuadTree : RefCounted
     {
         int x = boundary.GetX();
         int y = boundary.GetY();
-        int w = boundary.GetW();
-        int h = boundary.GetH();
-		Rectangle nw = new Rectangle(x-(w>>1),y+(h>>1),w>>1,h>>1);
-		Rectangle ne = new Rectangle(x+ (w>>1),y+(h>>1),w>>1,h>>1);
-		Rectangle sw = new Rectangle(x-(w>>1),y-(h>>1),w>>1,h>>1);
-		Rectangle se = new Rectangle(x+(w>>1),y-(h>>1),w>>1,h>>1);
+        int s = boundary.GetS();
+		Rectangle nw = new Rectangle(x-(s>>1),y+(s>>1),s>>1);
+		Rectangle ne = new Rectangle(x+ (s>>1),y+(s>>1),s>>1);
+		Rectangle sw = new Rectangle(x-(s>>1),y-(s>>1),s>>1);
+		Rectangle se = new Rectangle(x+(s>>1),y-(s>>1),s>>1);
 
         this.northwest = new QuadTree(nw, capacity);
         this.northeast = new QuadTree(ne, capacity);
@@ -37,8 +36,8 @@ public partial class QuadTree : RefCounted
     }
 	private bool QuadIntersectsCircle(Rectangle quad, Point center, int squaredRadius) {
 		// Find closest point on rectangle to circle center
-		int closestX = Mathf.Clamp(center.GetX(), quad.GetX() - quad.GetW(), quad.GetX() + quad.GetW());
-		int closestZ = Mathf.Clamp(center.GetY(), quad.GetY() - quad.GetH(), quad.GetY() + quad.GetH());
+		int closestX = Mathf.Clamp(center.GetX(), quad.GetX() - quad.GetS(), quad.GetX() + quad.GetS());
+		int closestZ = Mathf.Clamp(center.GetY(), quad.GetY() - quad.GetS(), quad.GetY() + quad.GetS());
 		
 		// Calculate squared distance between closest point and circle center
 		int dx = center.GetX() - closestX;
