@@ -1,7 +1,8 @@
 using Godot;
-public static class Helpers{
+public static class Helpers
+{
 
-    public static void CreateCameraToViewBounds(float bounds,Node3D parent)
+    public static void CreateCameraToViewBounds(float bounds, Node3D parent)
     {
         Camera3D camera = new Camera3D();
         parent.AddChild(camera);
@@ -9,13 +10,13 @@ public static class Helpers{
         // Position camera above the world to see everything
         // Height based on FOV and world size to ensure full visibility
         float fov = 75.0f; // Camera's field of view in degrees
-		camera.Fov = fov;
-        camera.Position = new Vector3(0,bounds, 0) * fov * 0.01f;
+        camera.Fov = fov;
+        camera.Position = new Vector3(0, bounds, 0) * fov * 0.01f;
         camera.RotationDegrees = new Vector3(-90, 0, 0); // Look straight down
     }
-	///<Summary>
-	/// create a QuadTree with bounds
-	/// <Summary>
+    ///<Summary>
+    /// create a QuadTree with bounds
+    /// <Summary>
     public static QuadTree CreateQuadTree(float size)
     {
         // Calculate bounds based on current world size
@@ -26,35 +27,37 @@ public static class Helpers{
         Square boundary = new Square(0, 0, halfSize);
         return new QuadTree(boundary, 4);
     }
-	///<Summary>
-	/// create a cone as a mesh of parent
-	/// <Summary>
-	public static MeshInstance3D CreateConeMeshAsChild(Node3D parent,float topRadius, float bottomRadius, float height){
+    ///<Summary>
+    /// create a cone as a mesh of parent
+    /// <Summary>
+    public static MeshInstance3D CreateConeMeshAsChild(Node3D parent, float topRadius, float bottomRadius, float height)
+    {
         // Create mesh
         MeshInstance3D meshInstance = new MeshInstance3D();
         parent.AddChild(meshInstance);
-        
+
         // Create a simple cone/arrow shape for the boid
         CylinderMesh mesh = new CylinderMesh();
-		mesh.BottomRadius = bottomRadius;
-		mesh.TopRadius = topRadius;
-		mesh.Height = height;
+        mesh.BottomRadius = bottomRadius;
+        mesh.TopRadius = topRadius;
+        mesh.Height = height;
         meshInstance.Mesh = mesh;
-		return meshInstance;
-	}
-	///<Summary>
-	/// Create a prism as child of parent with size.
-	/// <Summary>
-	public static MeshInstance3D CreatePrismMeshAsChild(Node3D parent,Vector3 size){
-        // Create mesh
+        return meshInstance;
+    }
+    ///<Summary>
+    /// Create a prism as child of parent with size.
+    /// <Summary>
+    public static MeshInstance3D CreatePrismMeshAsChild(Node3D parent, Vector3 size)
+    {
         MeshInstance3D meshInstance = new MeshInstance3D();
         parent.AddChild(meshInstance);
-        
-        // Create a simple cone/arrow shape for the boid
+
         var mesh = new PrismMesh();
-        mesh.Size = size; // Width, Height, Depth
+        mesh.Size = size;
         meshInstance.Mesh = mesh;
-		return meshInstance;
-	}
+        // Rotate the prism to face forward along the Z-axis
+        meshInstance.RotationDegrees = new Vector3(-90, 0, 0);
+        return meshInstance;
+    }
 
 }

@@ -1,146 +1,68 @@
 using Godot;
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 
 public partial class ConsoleAutoComplete : PanelContainer
 {
-    private List<string> suggestions = new List<string>();
-    private ItemList suggestionList;
-    private int selectedIndex = -1;
-    private const int MAX_HEIGHT = 200;
-    private const int ITEM_PADDING = 4;
+    private ItemList _list;
+    private int _selectedIndex = -1;
 
     public event Action<string> SuggestionSelected;
 
-    public override void _Ready()
-    {
-        SetupSuggestionList();
-    }
+    public override void _Ready() => SetupList();
 
-    private void SetupSuggestionList()
+    private void SetupList()
     {
-        suggestionList = new ItemList
+        _list = new ItemList
         {
             SelectMode = ItemList.SelectModeEnum.Single,
-            AllowReselect = true,
-            AutoHeight = true,
-            CustomMinimumSize = new Vector2(0, 0),
-            FocusMode = Control.FocusModeEnum.None  
+            FocusMode = Control.FocusModeEnum.None
         };
-
-        AddChild(suggestionList);
-
+        AddChild(_list);
         Hide();
     }
-
-    private float CalculateContentHeight()
+    public string GetSelectedText() =>
+        _selectedIndex >= 0 && _selectedIndex < _list.ItemCount
+            ? _list.GetItemText(_selectedIndex)
+            : null;
+    public void UpdateSuggestions(string input, IEnumerable<string> commands)
     {
-        if (suggestionList.ItemCount == 0) return 0;
+        _list.Clear();
+        Visible = false;
 
-        var theme = suggestionList.Theme;
-        if (theme == null) return suggestionList.ItemCount * (20 + ITEM_PADDING * 2);
-        float fontSize;
-        try
+        if (string.IsNullOrEmpty(input)) return;
+
+        var matches = commands
+            .Where(c => c?.StartsWith(input, StringComparison.OrdinalIgnoreCase) ?? false)
+            .OrderBy(c => c)
+            .ToArray();
+
+        foreach (var match in matches)
+            _list.AddItem(match);
+
+        if (matches.Length > 0)
         {
-            fontSize = theme.DefaultFontSize;
-        }
-        catch
-        {
-            fontSize = 16; 
-        }
-
-        float itemHeight = fontSize + (ITEM_PADDING * 2);
-        return itemHeight * suggestionList.ItemCount;
-    }
-
-    public void UpdateSuggestions(string input, IEnumerable<string> availableCommands)
-    {
-        if (suggestionList == null) return;
-
-        suggestions?.Clear();
-        suggestionList.Clear();
-        selectedIndex = -1;
-
-        if (string.IsNullOrEmpty(input) || availableCommands == null)
-        {
-            Hide();
-            return;
-        }
-
-        suggestions = availableCommands
-            .Where(cmd => cmd != null && cmd.StartsWith(input, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(cmd => cmd)
-            .ToList();
-
-        foreach (var suggestion in suggestions)
-        {
-            suggestionList.AddItem(suggestion);
-        }
-
-        if (suggestions.Count > 0)
-        {
-            Show();
-            float contentHeight = CalculateContentHeight();
-            suggestionList.CustomMinimumSize = new Vector2(0, Mathf.Min(contentHeight, MAX_HEIGHT));
-
             UpdateSelection(0);
-        }
-        else
-        {
-            Hide();
+            Visible = true;
         }
     }
 
-    // New method to handle visual selection without focus change
+    public void Navigate(int direction)
+    {
+        if (_list.ItemCount == 0) return;
+        UpdateSelection((_selectedIndex + direction + _list.ItemCount) % _list.ItemCount);
+    }
+
     private void UpdateSelection(int index)
     {
-        if (index >= 0 && index < suggestions.Count)
-        {
-            // Deselect the current item if one is selected
-            if (selectedIndex >= 0 && selectedIndex < suggestions.Count)
-            {
-                suggestionList.Deselect(selectedIndex);
-            }
+        if (index == _selectedIndex || index < 0 || index >= _list.ItemCount) return;
 
-            selectedIndex = index;
-            suggestionList.Select(selectedIndex);
-            suggestionList.EnsureCurrentIsVisible();
-        }
+        _list.Deselect(_selectedIndex);
+        _list.Select(_selectedIndex = index);
+        _list.EnsureCurrentIsVisible();
     }
 
-    public void NavigateSuggestions(int direction)
-    {
-        if (suggestions.Count == 0) return;
-
-        int newIndex = (selectedIndex + direction + suggestions.Count) % suggestions.Count;
-        UpdateSelection(newIndex);
-    }
-
-    public string GetSelectedSuggestion()
-    {
-        return selectedIndex >= 0 && selectedIndex < suggestions.Count
-            ? suggestions[selectedIndex]
-            : null;
-    }
-
-    // New method to handle suggestion acceptance
-    public void AcceptSuggestion()
-    {
-        string selected = GetSelectedSuggestion();
-        if (selected != null)
-        {
-            SuggestionSelected?.Invoke(selected);
-        }
-    }
-
-    public bool HasSuggestions => suggestions.Count > 0;
-
-    public void CancelSuggestions()
-    {
-        suggestions.Clear();
-        suggestionList.Clear();
-        selectedIndex = -1;
-        Hide();
-    }
+    public void Accept() => SuggestionSelected?.Invoke(_list.GetItemText(_selectedIndex));
+    public void Cancel() => Hide();
 }

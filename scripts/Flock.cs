@@ -1,117 +1,78 @@
 using Godot;
 using System.Collections.Generic;
+
 public partial class Flock : Node3D
 {
-    #region profiling_data
-    const string BOID_PROFILE_NAME = "boid_performance";
-    bool isProfilingEnabled = true;
-    double totalProcessingTime = 0;
-    int processingFrames = 0;
-    #endregion
-    #region flock_data
-    float world_size = 500.0f;
-    int num_boids = 500;
-    QuadTree quad_tree;
-    public List<Boid> flock = new List<Boid>();
-    Dictionary<int, Point> idToPoint = new Dictionary<int, Point>();
-    Dictionary<int, Boid> idToBoid = new Dictionary<int, Boid>();
-    #endregion
+    [Export] float worldSize = 250f;
+    [Export] int initialBoids = 10;
+
+    QuadTree quadTree;
+    readonly List<Boid> boids = new();
+    readonly Dictionary<int, BoidPoint> boidPoints = new();
 
     public override void _Ready()
     {
-        Helpers.CreateCameraToViewBounds(world_size, this);
-        quad_tree = Helpers.CreateQuadTree(world_size);
-        idToPoint.Clear();
+        Helpers.CreateCameraToViewBounds(worldSize, this);
+        quadTree = Helpers.CreateQuadTree(worldSize);
 
-        // Initialize the boid performance profile
-        MemoryProfiler.CreateProfile(BOID_PROFILE_NAME);
-
-        for (int i = 0; i < num_boids; i++)
+        for (int i = 0; i < initialBoids; i++)
         {
-            Boid boid = new Boid();
-            boid.Initialize(i, world_size, this);
-            AddChild(boid);
-            flock.Add(boid);
+            AddBoid(new Boid());
         }
-        StartProfiling();
     }
 
     public override void _Process(double delta)
     {
-        if (isProfilingEnabled)
+        UpdateQuadTree();
+        UpdateFlockBehavior();
+    }
+
+    void AddBoid(Boid boid)
+    {
+        AddChild(boid);
+        boid.Initialize(boids.Count, worldSize, this);
+        var point = new BoidPoint(boid);
+        boidPoints[boid.ID] = point;
+        boids.Add(boid);
+    }
+
+    void UpdateQuadTree()
+    {
+        quadTree.Clear();
+        foreach (var boid in boids)
         {
-            var startTime = Time.GetTicksUsec();
-            quad_tree.Clear();
-            ProcessBoids(delta);
-            var endTime = Time.GetTicksUsec();
-            double frameProcessingTime = (endTime - startTime) / QuadTreeConstants.WORLD_TO_QUAD_SCALE;
-            totalProcessingTime += frameProcessingTime;
-            processingFrames++;
-            MemoryProfiler.AddMetric(BOID_PROFILE_NAME, "avg_frame_time", totalProcessingTime / processingFrames);
-            MemoryProfiler.AddMetric(BOID_PROFILE_NAME, "last_frame_time", frameProcessingTime);
-            MemoryProfiler.AddMetric(BOID_PROFILE_NAME, "active_boids", flock.Count);
-            MemoryProfiler.AddMetric(BOID_PROFILE_NAME, "points_in_quadtree", idToPoint.Count);
-        }
-        else
-        {
-            ProcessBoids(delta);
+            if (boidPoints.TryGetValue(boid.ID, out var point))
+            {
+                point.UpdateFromBoid(boid);
+                quadTree.Insert(point);
+            }
         }
     }
 
-    private void ProcessBoids(double delta)
+    void UpdateFlockBehavior()
     {
-        for (int i = 0; i < flock.Count; i++)
+        foreach (var boid in boids)
         {
-            idToPoint[flock[i].ID].UpdatePosition(
-                flock[i].Position.X,
-                flock[i].Position.Z
-            );
-            quad_tree.Insert(idToPoint[flock[i].ID]);
+            boid.Flock(quadTree);
+        }
+    }
+
+    public Boid GetBoid(int id) => boidPoints.TryGetValue(id, out var p) ? p.Boid : null;
+    public Point GetPoint(int id) => boidPoints.TryGetValue(id, out var p) ? p : null;
+
+    class BoidPoint : Point
+    {
+        public readonly Boid Boid;
+
+        public BoidPoint(Boid boid) : base(boid.ID, boid.Position.X, boid.Position.Z)
+        {
+            Boid = boid;
         }
 
-        foreach (Boid boid in flock)
+        public void UpdateFromBoid(Boid boid)
         {
-            boid.Flock(quad_tree);
+            // Explicit scaling call for clarity
+            UpdatePosition(boid.Position.X, boid.Position.Z);
         }
-    }
-    public void StartProfiling()
-    {
-        isProfilingEnabled = true;
-        totalProcessingTime = 0;
-        processingFrames = 0;
-        MemoryProfiler.StartProfile(BOID_PROFILE_NAME);
-    }
-    public void StopProfiling()
-    {
-        isProfilingEnabled = false;
-        MemoryProfiler.StopProfile(BOID_PROFILE_NAME);
-    }
-    public Boid GetBoidFromID(int id)
-    {
-        if (idToBoid.TryGetValue(id, out Boid boid))
-        {
-            return boid;
-        }
-        return null;  // or throw exception if you prefer
-    }
-    public Point GetPointFromID(int id)
-    {
-        if (idToPoint.TryGetValue(id, out Point point))
-        {
-            return point;
-        }
-        throw new System.Exception("couldn't find point with id " + id);
-    }
-    public void AddToPointID(Point point)
-    {
-        idToPoint[point.GetID()] = point;
-    }
-    public void AddToBoidID(Boid boid)
-    {
-        idToBoid[boid.ID] = boid;
-    }
-    private void Log(string message)
-    {
-        DeveloperConsole.Log("[Flock] " + message);
     }
 }

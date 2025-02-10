@@ -1,136 +1,53 @@
-using Godot;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using Godot;
 
 public partial class ConsoleHistoryDisplay : PanelContainer
 {
-    private ItemList historyList;
-    private int selectedIndex = -1;
-    private const int MAX_HEIGHT = 200;
-    private const int ITEM_PADDING = 4;
-    
+    private ItemList _list;
+    private int _selectedIndex = -1;
+
     public event Action<string> HistorySelected;
 
-    public override void _Ready()
-    {
-        SetupHistoryList();
-    }
+    public override void _Ready() => SetupList();
 
-    private void SetupHistoryList()
+    private void SetupList()
     {
-        historyList = new ItemList
+        _list = new ItemList
         {
             SelectMode = ItemList.SelectModeEnum.Single,
-            AllowReselect = true,
-            AutoHeight = true,
-            CustomMinimumSize = new Vector2(0, 0),
             FocusMode = Control.FocusModeEnum.None
         };
-        
-        AddChild(historyList);
+        AddChild(_list);
         Hide();
     }
 
-    private float CalculateContentHeight()
+    public void ShowHistory(IReadOnlyList<string> history)
     {
-        if (historyList.ItemCount == 0) return 0;
+        _list.Clear();
+        for (int i = history.Count - 1; i >= 0; i--)
+            _list.AddItem(history[i]);
 
-        var theme = historyList.Theme;
-        if (theme == null) return historyList.ItemCount * (20 + ITEM_PADDING * 2);
-
-        float fontSize;
-        try
-        {
-            fontSize = theme.DefaultFontSize;
-        }
-        catch
-        {
-            fontSize = 16;
-        }
-
-        float itemHeight = fontSize + (ITEM_PADDING * 2);
-        return itemHeight * historyList.ItemCount;
+        Visible = history.Count > 0;
+        UpdateSelection(0);
     }
 
-    public void UpdateHistory(List<string> history)
+    public void Navigate(int direction)
     {
-        if (historyList == null) return;
-
-        historyList.Clear();
-        selectedIndex = -1;
-
-        if (history == null || history.Count == 0)
-        {
-            Hide();
-            return;
-        }
-
-        // Add items in reverse order (newest first)
-        for (int i = history.Count - 1; i >= 0; i--)
-        {
-            historyList.AddItem(history[i]);
-        }
-
-        Show();
-        float contentHeight = CalculateContentHeight();
-        historyList.CustomMinimumSize = new Vector2(0, Mathf.Min(contentHeight, MAX_HEIGHT));
-        
-        // Select the most recent command
-        UpdateSelection(0);
+        if (_list.ItemCount == 0) return;
+        UpdateSelection((_selectedIndex + direction + _list.ItemCount) % _list.ItemCount);
+        HistorySelected?.Invoke(_list.GetItemText(_selectedIndex));
     }
 
     private void UpdateSelection(int index)
     {
-        if (index >= 0 && index < historyList.ItemCount)
-        {
-            if (selectedIndex >= 0 && selectedIndex < historyList.ItemCount)
-            {
-                historyList.Deselect(selectedIndex);
-            }
-            
-            selectedIndex = index;
-            historyList.Select(selectedIndex);
-            historyList.EnsureCurrentIsVisible();
-        }
+        if (index == _selectedIndex || index < 0 || index >= _list.ItemCount) return;
+
+        _list.Deselect(_selectedIndex);
+        _list.Select(_selectedIndex = index);
+        _list.EnsureCurrentIsVisible();
     }
 
-    public void NavigateHistory(int direction)
-    {
-        if (historyList.ItemCount == 0) return;
-
-        int newIndex = (selectedIndex + direction + historyList.ItemCount) % historyList.ItemCount;
-        UpdateSelection(newIndex);
-        
-        string selected = GetSelectedHistory();
-        if (selected != null)
-        {
-            HistorySelected?.Invoke(selected);
-        }
-    }
-
-    public string GetSelectedHistory()
-    {
-        return selectedIndex >= 0 && selectedIndex < historyList.ItemCount 
-            ? historyList.GetItemText(selectedIndex) 
-            : null;
-    }
-
-    public void AcceptHistory()
-    {
-        string selected = GetSelectedHistory();
-        if (selected != null)
-        {
-            HistorySelected?.Invoke(selected);
-        }
-        Hide();
-    }
-
-    public bool IsVisible => Visible;
-
-    public void CancelDisplay()
-    {
-        selectedIndex = -1;
-        Hide();
-    }
+    public void Accept() => HistorySelected?.Invoke(_list.GetItemText(_selectedIndex));
+    public void Cancel() => Hide();
 }

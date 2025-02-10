@@ -5,18 +5,11 @@ public partial class QuadTreeTab : ConsoleTab
     private Control canvas;
     private QuadTree currentTree;
     private const float POINT_SIZE = 1.0f;
-    private const float PADDING = 20.0f; // Padding around the visualization
+    private const float PADDING = 20.0f;
 
-    public override void _Ready()
-    {
-        base._Ready();
-        SetupCanvas();
-    }
-
-    private void SetupCanvas()
+    protected override void OnTabReady()
     {
         canvas = new Control();
-        canvas.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(canvas);
         canvas.Draw += OnCanvasDraw;
     }
@@ -30,87 +23,68 @@ public partial class QuadTreeTab : ConsoleTab
     private void OnCanvasDraw()
     {
         if (currentTree == null) return;
-
-        // Calculate bounds of the entire quadtree
-        (Vector2 min, Vector2 max) = CalculateTreeBounds(currentTree);
-
-        // Calculate scale and offset to fit and center the tree
-        var bounds = new Vector2(max.X - min.X, max.Y - min.Y);
-        var canvasSize = canvas.Size;
-
-        // Calculate scale to fit the tree with padding
-        float scaleX = (canvasSize.X - 2 * PADDING) / bounds.X;
-        float scaleY = (canvasSize.Y - 2 * PADDING) / bounds.Y;
-        float scale = Mathf.Min(scaleX, scaleY);
-
-        // Calculate offset to center the tree
-        Vector2 center = (min + max) / 2;
-        Vector2 canvasCenter = canvasSize / 2;
-        Vector2 offset = canvasCenter - (center * scale);
-
-        // Draw the tree with transformation
+        
+        var bounds = CalculateTreeBounds();
+        var (scale, offset) = CalculateTransform(bounds);
         DrawQuadTree(currentTree, scale, offset);
     }
 
-    private (Vector2 min, Vector2 max) CalculateTreeBounds(QuadTree tree)
+    private (Vector2 min, Vector2 max) CalculateTreeBounds()
     {
-        var boundary = tree.GetBoundary();
-        float x = (float)boundary.GetX();
-        float y = (float)boundary.GetY();
-        float s = (float)boundary.GetS();
+        var boundary = currentTree.Boundary;
+        float size = boundary.HalfSize;
+        return (
+            new Vector2(boundary.X - size, boundary.Y - size),
+            new Vector2(boundary.X + size, boundary.Y + size)
+        );
+    }
 
-        Vector2 min = new Vector2(x - s, y - s);
-        Vector2 max = new Vector2(x + s, y + s);
+    private (float scale, Vector2 offset) CalculateTransform((Vector2 min, Vector2 max) bounds)
+    {
+        var size = bounds.max - bounds.min;
+        var canvasSize = canvas.Size;
 
-        if (tree.IsDivided())
-        {
-            void UpdateBounds(QuadTree child)
-            {
-                var (childMin, childMax) = CalculateTreeBounds(child);
-                min = new Vector2(Mathf.Min(min.X, childMin.X), Mathf.Min(min.Y, childMin.Y));
-                max = new Vector2(Mathf.Max(max.X, childMax.X), Mathf.Max(max.Y, childMax.Y));
-            }
+        // Calculate scale to fit with padding
+        float scale = Mathf.Min(
+            (canvasSize.X - 2 * PADDING) / size.X,
+            (canvasSize.Y - 2 * PADDING) / size.Y
+        );
 
-            UpdateBounds(tree.GetNorthwest());
-            UpdateBounds(tree.GetNortheast());
-            UpdateBounds(tree.GetSouthwest());
-            UpdateBounds(tree.GetSoutheast());
-        }
+        // Center the visualization
+        Vector2 center = (bounds.min + bounds.max) / 2;
+        Vector2 offset = canvasSize / 2 - (center * scale);
 
-        return (min, max);
+        return (scale, offset);
     }
 
     private void DrawQuadTree(QuadTree tree, float scale, Vector2 offset)
     {
-        var boundary = tree.GetBoundary();
-        var points = tree.GetPoints();
-
-        // Transform boundary coordinates
-        float x = (float)boundary.GetX() * scale + offset.X;
-        float y = (float)boundary.GetY() * scale + offset.Y;
-        float s = (float)boundary.GetS() * scale;
+        var boundary = tree.Boundary;
+        float x = boundary.X * scale + offset.X;
+        float y = boundary.Y * scale + offset.Y;
+        float size = boundary.HalfSize * scale;
 
         // Draw boundary
-        // var rect = new Rect2(x - s, y - s, s * 2);
-        // canvas.DrawRect(rect, Colors.White, false, 1.0f);
+        var rect = new Rect2(x - size, y - size, size * 2, size * 2);
+        canvas.DrawRect(rect, Colors.White, false);
 
         // Draw points
-        foreach (var point in points)
+        foreach (var point in tree.Points)
         {
-            Vector2 transformedPoint = new Vector2(
-                (float)point.GetX() * scale + offset.X,
-                (float)point.GetY() * scale + offset.Y
+            Vector2 pos = new Vector2(
+                point.GetX() * scale + offset.X,
+                point.GetY() * scale + offset.Y
             );
-            canvas.DrawCircle(transformedPoint, POINT_SIZE, Colors.Yellow);
+            canvas.DrawCircle(pos, POINT_SIZE, Colors.Yellow);
         }
 
-        // Recursively draw subdivisions
-        if (tree.IsDivided())
+        // Draw subdivisions
+        if (tree.Divided)
         {
-            DrawQuadTree(tree.GetNorthwest(), scale, offset);
-            DrawQuadTree(tree.GetNortheast(), scale, offset);
-            DrawQuadTree(tree.GetSouthwest(), scale, offset);
-            DrawQuadTree(tree.GetSoutheast(), scale, offset);
+            DrawQuadTree(tree.Nw, scale, offset);
+            DrawQuadTree(tree.Ne, scale, offset);
+            DrawQuadTree(tree.Sw, scale, offset);
+            DrawQuadTree(tree.Se, scale, offset);
         }
     }
 
@@ -125,4 +99,3 @@ public partial class QuadTreeTab : ConsoleTab
         // This tab doesn't handle text output
     }
 }
-

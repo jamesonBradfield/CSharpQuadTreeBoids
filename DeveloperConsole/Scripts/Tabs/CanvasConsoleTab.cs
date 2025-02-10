@@ -2,51 +2,25 @@ using Godot;
 
 public abstract partial class CanvasConsoleTab : ConsoleTab
 {
-    protected Control canvas;
-    protected const float PADDING = 20.0f; // Default padding around visualizations
+    protected Control Canvas;
+    protected const float Padding = 20f;
 
-    protected override void OnTabReady()
-    {
-        SetupCanvas();
-    }
+    protected override void OnTabReady() => SetupCanvas();
 
     protected virtual void SetupCanvas()
     {
-        canvas = new Control();
-        canvas.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        AddChild(canvas);
-        canvas.Draw += OnCanvasDraw;
+        Canvas = new Control { AnchorsPreset = (int)LayoutPreset.FullRect };
+        AddChild(Canvas);
+        Canvas.Draw += OnCanvasDraw;
     }
 
-    protected virtual void OnCanvasDraw()
+    protected virtual void OnCanvasDraw() { }
+    public override void Clear() => Canvas.QueueRedraw();
+
+    protected (float Scale, Vector2 Offset) GetContentTransform(Vector2 contentSize)
     {
-        // Override in derived classes to implement specific drawing logic
-    }
-
-    public override void Clear()
-    {
-        QueueRedraw();
-    }
-
-    public override void WriteLine(string message, Color? color = null)
-    {
-        // Canvas-based tabs typically don't handle text output
-    }
-
-    // Helper method to calculate scale for fitting content
-    protected (float scale, Vector2 offset) CalculateScaleAndOffset(Vector2 contentMin, Vector2 contentMax)
-    {
-        var bounds = new Vector2(contentMax.X - contentMin.X, contentMax.Y - contentMin.Y);
-        var canvasSize = canvas.Size;
-        
-        float scaleX = (canvasSize.X - 2 * PADDING) / bounds.X;
-        float scaleY = (canvasSize.Y - 2 * PADDING) / bounds.Y;
-        float scale = Mathf.Min(scaleX, scaleY);
-
-        Vector2 center = (contentMin + contentMax) / 2;
-        Vector2 canvasCenter = canvasSize / 2;
-        Vector2 offset = canvasCenter - (center * scale);
-
-        return (scale, offset);
+        var canvasSize = Canvas.Size - new Vector2(Padding * 2, Padding * 2);
+        float scale = Mathf.Min(canvasSize.X / contentSize.X, canvasSize.Y / contentSize.Y);
+        return (scale, (Canvas.Size - contentSize * scale) / 2);
     }
 }

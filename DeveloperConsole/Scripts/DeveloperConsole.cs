@@ -18,14 +18,14 @@ public partial class DeveloperConsole : Control
     private Dictionary<string, ConsoleCommand> commands = new Dictionary<string, ConsoleCommand>();
     private ConsoleHistory consoleHistory;
     private ConsoleHistoryDisplay historyDisplay;
-    private static DeveloperConsole instance;
+    private static DeveloperConsole _instance;
     public delegate void ConsoleCommand(string[] args);
 
     public override void _Ready()
     {
         #region ConsoleSetup
         ProcessMode = ProcessModeEnum.Always;
-        instance = this;
+        _instance = this;
         tabContainer = GetNode<TabContainer>("MarginContainer/VBoxContainer/TabContainer");
         inputField = GetNode<LineEdit>("MarginContainer/VBoxContainer/InputField");
         // More aggressive focus control
@@ -173,22 +173,10 @@ public partial class DeveloperConsole : Control
             {
                 if (!Visible || autoComplete == null) return;
 
-                if (autoComplete.HasSuggestions)
+                if (autoComplete.Visible) // Was HasSuggestions
                 {
-                    if (tabKey.ShiftPressed)
-                    {
-                        autoComplete.NavigateSuggestions(-1);
-                    }
-                    else
-                    {
-                        autoComplete.NavigateSuggestions(1);
-                    }
-                    string suggestion = autoComplete.GetSelectedSuggestion();
-                    if (suggestion != null)
-                    {
-                        inputField.Text = suggestion;
-                        inputField.CaretColumn = suggestion.Length;
-                    }
+                    autoComplete.Navigate(tabKey.ShiftPressed ? -1 : 1); // Was NavigateSuggestions
+                    inputField.Text = autoComplete.GetSelectedText(); // Was GetSelectedSuggestion
                 }
                 GetTree().Root.SetInputAsHandled();
                 AcceptEvent();
@@ -200,7 +188,7 @@ public partial class DeveloperConsole : Control
         List<string> history = new List<string>();
         // Get history from console history
         // You'll need to add a method to ConsoleHistory to get the list
-        historyDisplay.UpdateHistory(history);
+        historyDisplay.ShowHistory(history);
     }
     public override void _UnhandledInput(InputEvent @event)
     {
@@ -213,9 +201,9 @@ public partial class DeveloperConsole : Control
             // Check for Ctrl+H to toggle history display
             if (key.Keycode == Key.H && key.CtrlPressed)
             {
-                if (historyDisplay.IsVisible)
+                if (historyDisplay.Visible)
                 {
-                    historyDisplay.CancelDisplay();
+                    historyDisplay.Cancel();
                 }
                 else
                 {
@@ -226,14 +214,14 @@ public partial class DeveloperConsole : Control
             else switch (key.Keycode)
                 {
                     case Key.Up:
-                        if (autoComplete.HasSuggestions)
+                        if (autoComplete.Visible)
                         {
-                            autoComplete.NavigateSuggestions(-1);
+                            autoComplete.Navigate(-1);
                             handled = true;
                         }
-                        else if (historyDisplay.IsVisible)
+                        else if (historyDisplay.Visible)
                         {
-                            historyDisplay.NavigateHistory(-1);
+                            historyDisplay.Navigate(-1);
                             handled = true;
                         }
                         else
@@ -244,14 +232,14 @@ public partial class DeveloperConsole : Control
                         break;
 
                     case Key.Down:
-                        if (autoComplete.HasSuggestions)
+                        if (autoComplete.Visible)
                         {
-                            autoComplete.NavigateSuggestions(1);
+                            autoComplete.Navigate(1);
                             handled = true;
                         }
-                        else if (historyDisplay.IsVisible)
+                        else if (historyDisplay.Visible)
                         {
-                            historyDisplay.NavigateHistory(1);
+                            historyDisplay.Navigate(1);
                             handled = true;
                         }
                         else
@@ -263,28 +251,28 @@ public partial class DeveloperConsole : Control
 
                     case Key.Enter:
                     case Key.KpEnter:
-                        if (autoComplete.HasSuggestions)
+                        if (autoComplete.Visible)
                         {
-                            autoComplete.AcceptSuggestion();
-                            autoComplete.CancelSuggestions();
+                            autoComplete.Accept();
+                            autoComplete.Cancel();
                             handled = true;
                         }
-                        else if (historyDisplay.IsVisible)
+                        else if (historyDisplay.Visible)
                         {
-                            historyDisplay.AcceptHistory();
+                            historyDisplay.Accept();
                             handled = true;
                         }
                         break;
 
                     case Key.Escape:
-                        if (autoComplete.HasSuggestions)
+                        if (autoComplete.Visible)
                         {
-                            autoComplete.CancelSuggestions();
+                            autoComplete.Cancel();
                             handled = true;
                         }
-                        else if (historyDisplay.IsVisible)
+                        else if (historyDisplay.Visible)
                         {
-                            historyDisplay.CancelDisplay();
+                            historyDisplay.Cancel();
                             handled = true;
                         }
                         break;
@@ -299,7 +287,7 @@ public partial class DeveloperConsole : Control
 
     private void NavigateHistory(int direction)
     {
-        consoleHistory.NavigateHistory(direction, inputField.Text);
+		consoleHistory.Navigate(direction, inputField.Text); // Was NavigateHistory
     }
     private void OnHistoryChanged(string text)
     {
@@ -439,7 +427,7 @@ public partial class DeveloperConsole : Control
         Log($"> {text}");
         ExecuteCommand(text);
 
-        consoleHistory.AddToHistory(text);
+		consoleHistory.AddCommand(text);
         inputField.Clear();
     }
 
@@ -480,12 +468,12 @@ public partial class DeveloperConsole : Control
 
     public static void Log(string message, Color? color = null)
     {
-        if (instance == null)
+        if (_instance == null)
         {
-            GD.PrintErr("Console instance not initialized");
+            GD.PrintErr("Console _instance not initialized");
             return;
         }
-        instance.GetTab<ConsoleOutputTab>("console")?.WriteLine(message, color);
+        _instance.GetTab<ConsoleOutputTab>("console")?.WriteLine(message, color);
     }
 
     public static void LogError(string message) => Log(message, Colors.Red);
