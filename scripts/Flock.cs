@@ -5,19 +5,26 @@ public partial class Flock : Node3D
 {
     [Export] float worldSize = 250f;
     [Export] int initialBoids = 10;
+    public QuadTree quadTree;
 
-    QuadTree quadTree;
-    readonly List<Boid> boids = new();
+    public Flock()
+    {
+        quadTree = Helpers.CreateQuadTree(worldSize);
+    }
+
+    public readonly List<Boid> boids = new();
     readonly Dictionary<int, BoidPoint> boidPoints = new();
+
+
 
     public override void _Ready()
     {
         Helpers.CreateCameraToViewBounds(worldSize, this);
-        quadTree = Helpers.CreateQuadTree(worldSize);
+        AddChild(quadTree.GetDebugMesh());
 
         for (int i = 0; i < initialBoids; i++)
         {
-            AddBoid(new Boid());
+            AddBoid(new Boid(boids.Count, worldSize, this));
         }
     }
 
@@ -30,7 +37,6 @@ public partial class Flock : Node3D
     void AddBoid(Boid boid)
     {
         AddChild(boid);
-        boid.Initialize(boids.Count, worldSize, this);
         var point = new BoidPoint(boid);
         boidPoints[boid.ID] = point;
         boids.Add(boid);
@@ -57,8 +63,25 @@ public partial class Flock : Node3D
         }
     }
 
-    public Boid GetBoid(int id) => boidPoints.TryGetValue(id, out var p) ? p.Boid : null;
-    public Point GetPoint(int id) => boidPoints.TryGetValue(id, out var p) ? p : null;
+    public Boid GetBoid(int id)
+    {
+      try{
+		  return boidPoints[id].Boid;
+	  }catch{
+		  GD.PrintErr("Boid with id : " + id + " isn't in boidPoints");
+		  return null;
+	  }
+    }
+
+    public Point GetPoint(int id)
+    {
+      try{
+		  return boidPoints[id];
+	  }catch{
+		  GD.PrintErr("Boid with id : " + id + " isn't in boidPoints");
+		  return null;
+	  }
+    }
 
     class BoidPoint : Point
     {

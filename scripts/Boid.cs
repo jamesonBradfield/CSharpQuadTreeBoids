@@ -1,6 +1,6 @@
 using Godot;
 using System.Collections.Generic;
-
+[GlobalClass]
 public partial class Boid : Node3D
 {
     // Weights and parameters
@@ -22,12 +22,12 @@ public partial class Boid : Node3D
     // Dependencies
     Flock parentFlock;
 
-    public void Initialize(int id, float worldSize, Flock flock)
+    public Boid(int id, float worldSize,Flock parentFlock)
     {
-        parentFlock = flock;
-        ID = id;
-        this.worldSize = worldSize;
-        velocity = RandomDirection() * maxSpeed;
+        this.parentFlock = parentFlock;
+		this.ID = id;
+		this.worldSize = worldSize;
+		this.velocity = RandomDirection() * maxSpeed;
     }
 
     Vector3 RandomDirection()
