@@ -6,7 +6,7 @@ public partial class QuadTree : RefCounted
 {
     private readonly Square boundary;
     private readonly int capacity;
-    private readonly List<Point> points = new();
+    private readonly List<Boid> boids= new();
     private QuadTree? nw, ne, sw, se;
     private bool divided;
 
@@ -14,7 +14,7 @@ public partial class QuadTree : RefCounted
 
     public Square Boundary => boundary;
     public int Capacity => capacity;
-    public List<Point> Points => points;
+    public List<Boid> Boids => boids;
     public bool Divided { get => divided; set => divided = value; }
     public QuadTree? Nw { get => nw; set => nw = value; }
     public QuadTree? Ne { get => ne; set => ne = value; }
@@ -28,23 +28,23 @@ public partial class QuadTree : RefCounted
  
     }
 	// TODO: experiment with quadrant checking code to "guess" or "smart-subdivide" our quads, this way we aren't wasting memory.
-    public void Insert(Point point)
+    public void Insert(Boid boid)
     {
-        if (!Boundary.Contains(point)) return; // NOTE: we can look at this math function to implement a rough quadrant check.
+        if (!Boundary.Contains(boid.Position)) return; // NOTE: we can look at this math function to implement a rough quadrant check.
 		// NOTE: we might also want to experiment with our lightweight Square idea (we don't really need data there we can just on the fly compute our quadtree bounds with bitshifting to divide our root quadtrees size to calculate our x y and half-size)
 		// NOTE: we could store all the data we need in a depth variable that will dictate how far down we need to calculate.
-        if (Points.Count < Capacity)
+        if (Boids.Count < Capacity)
         {
-            Points.Add(point);
+            Boids.Add(boid);
             return;
         }
 
         if (!Divided) Subdivide();
 
-        Nw?.Insert(point);
-        Ne?.Insert(point);
-        Sw?.Insert(point);
-        Se?.Insert(point);
+        Nw?.Insert(boid);
+        Ne?.Insert(boid);
+        Sw?.Insert(boid);
+        Se?.Insert(boid);
     }
 
     private void Subdivide()
@@ -63,27 +63,26 @@ public partial class QuadTree : RefCounted
     }
     public void Clear()
     {
-        Points.Clear();
+        Boids.Clear();
         Nw = Ne = Sw = Se = null;
         Divided = false;
     }
 
 	#region queries
-    public List<Point> QueryRadius(Point center, float worldRadius)
+    public List<Boid> QueryRadius(Vector3i center, int scaledRadius)
     {
-        int scaledRadius = (int)(worldRadius * QuadTreeConstants.WORLD_TO_QUAD_SCALE);
         int sqRadius = scaledRadius * scaledRadius;
-        return QueryRadius(center, sqRadius, new List<Point>());
+        return QueryRadius(center, sqRadius, new List<Boid>());
     }
 
-    private List<Point> QueryRadius(Point center, int sqRadius, List<Point> results)
+    private List<Boid> QueryRadius(Vector3i center, int sqRadius, List<Boid> results)
     {
         if (!QuadIntersectsCircle(center, sqRadius)) return results;
 
-        foreach (var p in Points)
+        foreach (var p in Boids)
         {
-            int dx = p.GetX() - center.GetX();
-            int dy = p.GetY() - center.GetY();
+            int dx = p.Position.x - center.x;
+            int dy = p.Position.y - center.y;
             if (dx * dx + dy * dy <= sqRadius) results.Add(p);
         }
 
@@ -98,13 +97,13 @@ public partial class QuadTree : RefCounted
         return results;
     }
 
-    private bool QuadIntersectsCircle(Point center, int sqRadius)
+    private bool QuadIntersectsCircle(Vector3i center, int sqRadius)
     {
-        int closestX = Math.Clamp(center.GetX(), Boundary.X - Boundary.HalfSize, Boundary.X + Boundary.HalfSize);
-        int closestY = Math.Clamp(center.GetY(), Boundary.Y - Boundary.HalfSize, Boundary.Y + Boundary.HalfSize);
+        int closestX = Math.Clamp(center.x, Boundary.X - Boundary.HalfSize, Boundary.X + Boundary.HalfSize);
+        int closestY = Math.Clamp(center.y, Boundary.Y - Boundary.HalfSize, Boundary.Y + Boundary.HalfSize);
 
-        int dx = center.GetX() - closestX;
-        int dy = center.GetY() - closestY;
+        int dx = center.x - closestX;
+        int dy = center.y - closestY;
         return (long)dx * dx + (long)dy * dy <= sqRadius;
     }
 	#endregion

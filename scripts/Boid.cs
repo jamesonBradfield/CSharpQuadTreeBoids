@@ -1,167 +1,131 @@
 using Godot;
 using System.Collections.Generic;
-[GlobalClass]
-public partial class Boid : Node3D
+public partial struct Boid
 {
-    // Weights and parameters
-    float alignmentWeight = 0.3f;
-    float cohesionWeight = 0.3f;
-    float separationWeight = 1.3f;
-    float separationRadius = 5.0f;
-    public float searchRadius = 10.0f;
-    public float maxSpeed = 50.0f;
-    public float maxForce = 1.0f;
-    float fieldOfView = 120.0f;
-
-    // State
-    public Vector3 velocity;
-    Vector3 acceleration;
-    public int ID;
-    public float worldSize;
-
-    // Dependencies
-    Flock parentFlock;
-
-    public Boid(int id, float worldSize,Flock parentFlock)
+    public  Vector3i velocity;
+    private Vector3i acceleration;
+    public Vector3i Position;
+	private BoidSettings settings;
+    public Boid(Vector3 Position,Vector3i velocity,BoidSettings settings)
     {
-        this.parentFlock = parentFlock;
-		this.ID = id;
-		this.worldSize = worldSize;
-		this.velocity = RandomDirection() * maxSpeed;
+		this.Position = (Vector3i)(Position) * QuadTreeConstants.WORLD_TO_QUAD_SCALE;
+		this.velocity = velocity;
+		this.settings = settings;
+		this.acceleration = new(0,0,0);
     }
 
-    Vector3 RandomDirection()
-    {
-        float angle = (float)GD.RandRange(0, Mathf.Tau);
-        return new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)).Normalized();
-    }
-
-    public override void _Ready()
-    {
-        Helpers.CreatePrismMeshAsChild(this, new Vector3(2.0f, 4.0f, 2.0f));
-        Position = new Vector3(
-            (float)GD.RandRange(-worldSize, worldSize),
-            0,
-            (float)GD.RandRange(-worldSize, worldSize)
-        );
-    }
-
-    public override void _PhysicsProcess(double delta)
-    {
-        UpdateRotation();
-        UpdateMovement(delta);
-        WrapPosition();
-        acceleration = Vector3.Zero;
-    }
-
-    void UpdateRotation()
-    {
-        if (velocity.LengthSquared() > 0.01f)
-        {
-            LookAt(GlobalPosition + velocity.Normalized(), Vector3.Up);
-        }
-    }
-
-    void UpdateMovement(double delta)
+    public void UpdateMovement()
     {
         velocity += acceleration;
-        velocity = velocity.LimitLength(maxSpeed);
-        Position += velocity * (float)delta;
-    }
-
-    void WrapPosition()
-    {
-        var halfSize = worldSize / 2;
-        Position = new Vector3(
-            Wrap(Position.X, -halfSize, halfSize),
-            Position.Y,
-            Wrap(Position.Z, -halfSize, halfSize)
-        );
-    }
-
-    float Wrap(float value, float min, float max)
-    {
-        float range = max - min;
-        while (value < min) value += range;
-        while (value > max) value -= range;
-        return value;
+        velocity = velocity.LimitLength(settings.Maxspeed);
+        Position += velocity;
+		acceleration = new Vector3i(0,0,0);
     }
 
     public void Flock(QuadTree quadTree)
     {
         var nearby = GetNearbyBoids(quadTree);
-        acceleration += Alignment(nearby) * alignmentWeight;
-        acceleration += Cohesion(nearby) * cohesionWeight;
-        acceleration += Separation(nearby) * separationWeight;
+        acceleration += Alignment(nearby) * settings.Alignmentweight;
+        acceleration += Cohesion(nearby) * settings.Cohesionweight;
+        acceleration += Separation(nearby) * settings.Separationweight;
     }
 
-    List<Boid> GetNearbyBoids(QuadTree quadTree)
+    public List<Boid> GetNearbyBoids(QuadTree quadTree)
     {
         var nearby = new List<Boid>();
-        var myPoint = parentFlock.GetPoint(ID);
-        if (myPoint == null) return nearby;
 
-        var points = quadTree.QueryRadius(myPoint, searchRadius); // Pass float directly
+        List<Boid> boids = quadTree.QueryRadius(this.Position, (int)(settings.Searchradius * QuadTreeConstants.WORLD_TO_QUAD_SCALE));
 
-        foreach (var p in points)
+        foreach (Boid b in boids)
         {
-            if (p.GetID() == ID) continue;
-
-            var boid = parentFlock.GetBoid(p.GetID());
-            if (boid != null && IsInFieldOfView(boid.Position))
+            if (IsInFieldOfView(b.Position))
             {
-                nearby.Add(boid);
+                nearby.Add(b);
             }
         }
         return nearby;
     }
 
-    bool IsInFieldOfView(Vector3 otherPos)
+    public bool IsInFieldOfView(Vector3i otherPos)
     {
-        Vector3 toOther = (otherPos - Position).Normalized();
-        float angle = Mathf.RadToDeg(Mathf.Acos(velocity.Normalized().Dot(toOther)));
-        return angle <= fieldOfView * 0.5f;
+        if (velocity.LengthSquared() < 1) return true;
+        
+        Vector3i toOther = otherPos - Position;
+        float currentLength = velocity.Length();
+        float dotProduct = velocity.x * toOther.x + velocity.y * toOther.y + velocity.z * toOther.z;
+        float otherLength = toOther.Length();
+        
+        if (currentLength == 0 || otherLength == 0) return true;
+        
+        float angle = Mathf.RadToDeg(Mathf.Acos(dotProduct / (currentLength * otherLength)));
+        return angle <= settings.Fieldofview * 0.5f;
     }
 
-    Vector3 Alignment(List<Boid> nearby)
+
+    public Vector3i Alignment(List<Boid> nearby)
     {
-        if (nearby.Count == 0) return Vector3.Zero;
+        if (nearby.Count == 0) return new Vector3i(0, 0, 0);
 
-        Vector3 avgVelocity = Vector3.Zero;
-        foreach (var boid in nearby) avgVelocity += boid.velocity;
-
-        avgVelocity = avgVelocity.Normalized() * maxSpeed;
-        return (avgVelocity - velocity).LimitLength(maxForce);
-    }
-
-    Vector3 Cohesion(List<Boid> nearby)
-    {
-        if (nearby.Count == 0) return Vector3.Zero;
-
-        Vector3 avgPosition = Vector3.Zero;
-        foreach (var boid in nearby) avgPosition += boid.Position;
-
-        return ((avgPosition / nearby.Count - Position).Normalized() * maxSpeed - velocity)
-            .LimitLength(maxForce);
-    }
-
-    Vector3 Separation(List<Boid> nearby)
-    {
-        Vector3 steering = Vector3.Zero;
-
+        Vector3i avgVelocity = new Vector3i(0, 0, 0);
         foreach (var boid in nearby)
         {
-            Vector3 diff = Position - boid.Position;
-            float distance = diff.Length();
+            avgVelocity += boid.velocity;
+        }
+        avgVelocity = new Vector3i(
+            avgVelocity.x / nearby.Count,
+            avgVelocity.y / nearby.Count,
+            avgVelocity.z / nearby.Count
+        );
 
-            if (distance > 0 && distance < separationRadius)
+        avgVelocity = avgVelocity.LimitLength(settings.Maxspeed);
+        return (avgVelocity - velocity).LimitLength(settings.Maxforce);
+    }
+
+    public Vector3i Cohesion(List<Boid> nearby)
+    {
+        if (nearby.Count == 0) return new Vector3i(0, 0, 0);
+
+        Vector3i center = new Vector3i(0, 0, 0);
+        foreach (var boid in nearby)
+        {
+            center += boid.Position;
+        }
+        center = new Vector3i(
+            center.x / nearby.Count,
+            center.y / nearby.Count,
+            center.z / nearby.Count
+        );
+
+        Vector3i desired = center - Position;
+        desired = desired.LimitLength(settings.Maxspeed);
+        return (desired - velocity).LimitLength(settings.Maxforce);
+    }
+
+    public Vector3i Separation(List<Boid> nearby)
+    {
+        if (nearby.Count == 0) return new Vector3i(0, 0, 0);
+
+        Vector3i steering = new Vector3i(0, 0, 0);
+        foreach (var boid in nearby)
+        {
+            Vector3i diff = Position - boid.Position;
+            float distance = diff.Length();
+            if (distance > 0 && distance < settings.Separationradius)
             {
-                steering += diff.Normalized() / Mathf.Max(distance, 0.0001f);
+                steering += new Vector3i(
+                    (int)(diff.x / distance),
+                    (int)(diff.y / distance),
+                    (int)(diff.z / distance)
+                );
             }
         }
 
-        return nearby.Count > 0
-            ? (steering / nearby.Count).LimitLength(maxForce)
-            : Vector3.Zero;
+		steering = new Vector3i(
+			steering.x / nearby.Count,
+			steering.y / nearby.Count,
+			steering.z / nearby.Count
+		);
+
+        return steering.LimitLength(settings.Maxforce);
     }
 }

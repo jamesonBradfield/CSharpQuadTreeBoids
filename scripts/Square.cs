@@ -13,22 +13,22 @@ public struct Square
         HalfSize = halfSize;
     }
 
-    public bool Contains(Point point)
+    public bool Contains(Vector3i point)
     {
-        int dx = point.GetX() - X;
-        int dy = point.GetY() - Y;
+        int dx = point.x - X;
+        int dy = point.y - Y;
         return Math.Abs(dx) <= HalfSize && Math.Abs(dy) <= HalfSize;
     }
 
-    public bool IntersectsCircle(Point center, int squaredRadius)
+    public bool IntersectsCircle(Vector3i center, int squaredRadius)
     {
         // Find closest point in square to the circle center
-        int closestX = Math.Clamp(center.GetX(), X - HalfSize, X + HalfSize);
-        int closestY = Math.Clamp(center.GetY(), Y - HalfSize, Y + HalfSize);
+        int closestX = Math.Clamp(center.x, X - HalfSize, X + HalfSize);
+        int closestY = Math.Clamp(center.y, Y - HalfSize, Y + HalfSize);
 
         // Calculate squared distance to circle center
-        int dx = center.GetX() - closestX;
-        int dy = center.GetY() - closestY;
+        int dx = center.x - closestX;
+        int dy = center.y - closestY;
         return (long)dx * dx + (long)dy * dy <= squaredRadius;
     }
 }
