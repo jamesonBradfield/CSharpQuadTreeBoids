@@ -16,8 +16,9 @@ public partial class Flock : Node3D
         quadTree = Helpers.CreateQuadTree(worldSize);
     }
 
-    public readonly List<Boid> boids = new();
-    public readonly Dictionary<int, BoidPoint> boidPoints = new();
+    public readonly Dictionary<int, Point> points = new();
+    public readonly Dictionary<int, Boid> boids = new();
+
 
 
 
@@ -44,35 +45,32 @@ public partial class Flock : Node3D
     {
         AddChild(boid);
         var point = new BoidPoint(boid);
-        boidPoints[boid.ID] = point;
-        boids.Add(boid);
+        points[boid.ID] = point;
+		boids[boid.ID] = boid;
     }
 
-    void UpdateQuadTree()
+    public void UpdateQuadTree()
     {
         quadTree.Clear();
-        foreach (var boid in boids)
+        for (int id = 0; id < boids.Count;id++)
         {
-            if (boidPoints.TryGetValue(boid.ID, out var point))
-            {
-                point.UpdateFromBoid(boid);
-                quadTree.Insert(point);
-            }
+			points[id].UpdatePosition(boids[id].Position.X,boids[id].Position.Z);
+			quadTree.Insert(points[id]);
         }
     }
 
     void UpdateFlockBehavior()
     {
-        foreach (var boid in boids)
+        for (int id = 0; id < boids.Count;id++)
         {
-            boid.Flock(quadTree);
+            boids[id].Flock(quadTree);
         }
     }
 
     public Boid? GetBoid(int id)
     {
       try{
-		  return boidPoints[id].Boid;
+		  return boids[id];
 	  }catch{
 		  GD.PrintErr("Boid with id : " + id + " isn't in boidPoints");
 		  return null;
@@ -82,7 +80,7 @@ public partial class Flock : Node3D
     public Point? GetPoint(int id)
     {
       try{
-		  return boidPoints[id];
+		  return points[id];
 	  }catch{
 		  GD.PrintErr("Boid with id : " + id + " isn't in boidPoints");
 		  return null;
