@@ -6,12 +6,17 @@ public partial struct Boid
     private Vector3i acceleration;
     public Vector3i Position;
 	private BoidSettings settings;
-    public Boid(Vector3 Position,Vector3i velocity,BoidSettings settings)
+    public Boid(Vector3 Position,BoidSettings settings)
     {
 		this.Position = (Vector3i)(Position) * QuadTreeConstants.WORLD_TO_QUAD_SCALE;
-		this.velocity = velocity;
+		this.velocity = (Vector3i)(RandomDirection() * settings.Maxspeed);
 		this.settings = settings;
 		this.acceleration = new(0,0,0);
+    }
+    Vector3 RandomDirection()
+    {
+        float angle = (float)GD.RandRange(0, Mathf.Tau);
+        return new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)).Normalized();
     }
 
     public void UpdateMovement()
@@ -19,7 +24,7 @@ public partial struct Boid
         velocity += acceleration;
         velocity = velocity.LimitLength(settings.Maxspeed);
         Position += velocity;
-		acceleration = new Vector3i(0,0,0);
+		GD.Print("Boid Position " + Position);
     }
 
     public void Flock(QuadTree quadTree)
@@ -128,4 +133,23 @@ public partial struct Boid
 
         return steering.LimitLength(settings.Maxforce);
     }
+public void WrapPosition(float worldSize)
+{
+    float scale = QuadTreeConstants.WORLD_TO_QUAD_SCALE;
+    int halfSize = (int)(worldSize * scale / 2);
+    
+    Position = new Vector3i(
+        Wrap(Position.x, -halfSize, halfSize),
+        Position.y,
+        Wrap(Position.z, -halfSize, halfSize)
+    );
+}
+
+private int Wrap(int value, int min, int max)
+{
+    int range = max - min;
+    while (value < min) value += range;
+    while (value > max) value -= range;
+    return value;
+}
 }

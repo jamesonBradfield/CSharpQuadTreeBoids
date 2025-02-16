@@ -13,17 +13,12 @@ public partial class Flock : Node3D
     private QuadTree quadTree;
 	private HashSet<Boid> boids = new HashSet<Boid>();
 
-    public Flock(float worldSize,int initialBoids,bool testing)
-    {
-		this.worldSize = worldSize;
-		this.initialBoids = initialBoids;
-		this.testing = testing;
-        quadTree = Helpers.CreateQuadTree(worldSize);
-        for (int i = 0; i < initialBoids; i++)
-        {
-            boids.Add(new Boid(Vector3.Zero,new Vector3i(0,0,0),settings));
-        }
-    }
+  //   public Flock(float worldSize,int initialBoids,bool testing)
+  //   {
+		// this.worldSize = worldSize;
+		// this.initialBoids = initialBoids;
+		// this.testing = testing;
+  //   }
 
 	// NOTE: OLD BOID NODE Functions!
     // public override void _Ready()
@@ -79,8 +74,18 @@ public partial class Flock : Node3D
 
     public override void _Ready()
     {
+        quadTree = Helpers.CreateQuadTree(worldSize);
 		if(!testing){
 			Helpers.CreateCameraToViewBounds(worldSize, this);
+		}
+		  for (int i = 0; i < initialBoids; i++)
+		{
+			Vector3 randomPos = new Vector3(
+				(float)GD.RandRange(-worldSize/2, worldSize/2),
+				0,
+				(float)GD.RandRange(-worldSize/2, worldSize/2)
+			);
+			boids.Add(new Boid(randomPos, settings));
 		}
     }
 
@@ -96,6 +101,7 @@ public partial class Flock : Node3D
         {
 			// UpdateRotation();
 			boid.UpdateMovement();
+			boid.WrapPosition(worldSize);
 		}
     }
 
