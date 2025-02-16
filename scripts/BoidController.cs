@@ -87,14 +87,14 @@ public partial class BoidController : Node
     {
         if (flock == null) return;
         var quadTree = flock.quadTree as QuadTree;
-        if (quadTree != null)
-        {
-            quadTree.SetDebugVisibility(
-                showQuadTree,
-                debugLineOpacity,
-                showQuadTreePoints
-            );
-        }
+        // if (quadTree != null)
+        // {
+        //     quadTree.SetDebugVisibility(
+        //         showQuadTree,
+        //         debugLineOpacity,
+        //         showQuadTreePoints
+        //     );
+        // }
 
         // Update all boids with new settings
         foreach (Node child in flock.GetChildren())

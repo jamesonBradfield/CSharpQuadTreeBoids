@@ -3,24 +3,30 @@ using System.Collections.Generic;
 
 public partial class Flock : Node3D
 {
-    [Export] float worldSize = 250f;
-    [Export] int initialBoids = 10;
+    [Export] public float worldSize = 250f;
+    [Export] public int initialBoids = 10;
+	public bool testing = false;
     public QuadTree quadTree;
 
-    public Flock()
+    public Flock(float worldSize,int initialBoids,bool testing)
     {
+		this.worldSize = worldSize;
+		this.initialBoids = initialBoids;
+		this.testing = testing;
         quadTree = Helpers.CreateQuadTree(worldSize);
     }
 
     public readonly List<Boid> boids = new();
-    readonly Dictionary<int, BoidPoint> boidPoints = new();
+    public readonly Dictionary<int, BoidPoint> boidPoints = new();
 
 
 
     public override void _Ready()
     {
-        Helpers.CreateCameraToViewBounds(worldSize, this);
-        AddChild(quadTree.GetDebugMesh());
+		if(!testing){
+			Helpers.CreateCameraToViewBounds(worldSize, this);
+		}
+        // AddChild(quadTree.GetDebugMesh());
 
         for (int i = 0; i < initialBoids; i++)
         {
@@ -34,7 +40,7 @@ public partial class Flock : Node3D
         UpdateFlockBehavior();
     }
 
-    void AddBoid(Boid boid)
+    public void AddBoid(Boid boid)
     {
         AddChild(boid);
         var point = new BoidPoint(boid);
@@ -63,7 +69,7 @@ public partial class Flock : Node3D
         }
     }
 
-    public Boid GetBoid(int id)
+    public Boid? GetBoid(int id)
     {
       try{
 		  return boidPoints[id].Boid;
@@ -73,7 +79,7 @@ public partial class Flock : Node3D
 	  }
     }
 
-    public Point GetPoint(int id)
+    public Point? GetPoint(int id)
     {
       try{
 		  return boidPoints[id];
@@ -81,21 +87,5 @@ public partial class Flock : Node3D
 		  GD.PrintErr("Boid with id : " + id + " isn't in boidPoints");
 		  return null;
 	  }
-    }
-
-    class BoidPoint : Point
-    {
-        public readonly Boid Boid;
-
-        public BoidPoint(Boid boid) : base(boid.ID, boid.Position.X, boid.Position.Z)
-        {
-            Boid = boid;
-        }
-
-        public void UpdateFromBoid(Boid boid)
-        {
-            // Explicit scaling call for clarity
-            UpdatePosition(boid.Position.X, boid.Position.Z);
-        }
     }
 }
